@@ -57,6 +57,7 @@ const en = {
     tabStatus: 'Status',
     tabRole: 'Role',
     roleName: 'Name',
+    oidcRoleKey: 'OIDC Role Key',
     role: 'Name',
     all: 'All',
     normal: 'Normal',

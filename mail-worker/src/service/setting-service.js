@@ -49,6 +49,7 @@ const settingService = {
 
 
 		let linuxdoSwitch = c.env.linuxdo_switch;
+		let oidcSwitch = c.env.oidc_switch;
 		let projectLink = c.env.project_link;
 
 		if (typeof linuxdoSwitch === 'string' && linuxdoSwitch === 'true') {
@@ -57,6 +58,14 @@ const settingService = {
 			linuxdoSwitch = true
 		} else {
 			linuxdoSwitch = false
+		}
+
+		if (typeof oidcSwitch === 'string' && oidcSwitch === 'true') {
+			oidcSwitch = true
+		} else if (oidcSwitch === true) {
+			oidcSwitch = true
+		} else {
+			oidcSwitch = false
 		}
 
 		console.log(projectLink)
@@ -74,6 +83,12 @@ const settingService = {
 		setting.linuxdoClientId = c.env.linuxdo_client_id;
 		setting.linuxdoCallbackUrl = c.env.linuxdo_callback_url;
 		setting.linuxdoSwitch = linuxdoSwitch;
+		setting.oidcClientId = c.env.oidc_client_id;
+		setting.oidcCallbackUrl = c.env.oidc_callback_url;
+		setting.oidcAuthorizeUrl = c.env.oidc_authorize_url || (c.env.oidc_issuer ? `${String(c.env.oidc_issuer).replace(/\/+$/, '')}/oauth2/authorize` : '');
+		setting.oidcScope = c.env.oidc_scope || 'openid profile email';
+		setting.oidcName = c.env.oidc_name || '统一身份认证';
+		setting.oidcSwitch = oidcSwitch;
 
 		setting.emailPrefixFilter = setting.emailPrefixFilter.split(",").filter(Boolean);
 
@@ -217,6 +232,12 @@ const settingService = {
 			linuxdoClientId: settingRow.linuxdoClientId,
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
+			oidcClientId: settingRow.oidcClientId,
+			oidcCallbackUrl: settingRow.oidcCallbackUrl,
+			oidcAuthorizeUrl: settingRow.oidcAuthorizeUrl,
+			oidcScope: settingRow.oidcScope,
+			oidcName: settingRow.oidcName,
+			oidcSwitch: settingRow.oidcSwitch,
 			minEmailPrefix: settingRow.minEmailPrefix,
 			projectLink: settingRow.projectLink
 		};

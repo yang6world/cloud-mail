@@ -47,6 +47,10 @@
           <el-button class="btn" v-if="settingStore.settings.linuxdoSwitch"  style="margin-top: 10px"  @click="linuxDoLogin">
             <el-avatar src="/image/linuxdo.webp" :size="18" style="margin-right: 10px" />LinuxDo
           </el-button>
+          <el-button class="btn" v-if="settingStore.settings.oidcSwitch" style="margin-top: 10px" @click="oidcLogin">
+            <Icon icon="mingcute:idcard-line" width="18" height="18" style="margin-right: 10px"/>
+            {{ settingStore.settings.oidcName }}
+          </el-button>
         </div>
         <div v-show="show !== 'login'">
           <el-input class="email-input" v-model="registerForm.email" type="text" :placeholder="$t('emailAccount')"
@@ -96,6 +100,10 @@
           </el-button>
           <el-button v-if="settingStore.settings.linuxdoSwitch" class="btn" style="margin-top: 10px"  @click="linuxDoLogin">
             <el-avatar src="/image/linuxdo.webp" :size="18" style="margin-right: 10px" />LinuxDo
+          </el-button>
+          <el-button v-if="settingStore.settings.oidcSwitch" class="btn" style="margin-top: 10px" @click="oidcLogin">
+            <Icon icon="mingcute:idcard-line" width="18" height="18" style="margin-right: 10px"/>
+            {{ settingStore.settings.oidcName }}
           </el-button>
         </div>
         <template v-if="settingStore.settings.register === 0">
@@ -161,7 +169,7 @@ import {cvtR2Url} from "@/utils/convert.js";
 import {loginUserInfo} from "@/request/my.js";
 import {permsToRouter} from "@/perm/perm.js";
 import {useI18n} from "vue-i18n";
-import {oauthBindUser, oauthLinuxDoLogin} from "@/request/ouath.js";
+import {oauthBindUser, oauthLinuxDoLogin, oauthOidcLogin} from "@/request/ouath.js";
 
 const {t} = useI18n();
 const accountStore = useAccountStore();
@@ -201,6 +209,7 @@ let verifyToken = ''
 let turnstileId = null
 let botJsError = ref(false)
 let verifyErrorCount = 0
+const oidcFlowKey = 'cloud-mail-oidc-flow'
 
 window.onTurnstileSuccess = (token) => {
   verifyToken = token;
@@ -257,12 +266,93 @@ function linuxDoLogin() {
       `https://connect.linux.do/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid+profile+email`
 }
 
+async function oidcLogin() {
+  const clientId = settingStore.settings.oidcClientId
+  const authorizeUrl = settingStore.settings.oidcAuthorizeUrl
+  const redirectUri = settingStore.settings.oidcCallbackUrl
+  if (!clientId || !authorizeUrl || !redirectUri) {
+    ElMessage({
+      message: 'OIDC配置不完整',
+      type: 'error',
+      plain: true,
+    })
+    return
+  }
+
+  const state = randomUrlSafeString(24)
+  const codeVerifier = randomUrlSafeString(64)
+  const codeChallenge = await pkceChallenge(codeVerifier)
+  localStorage.setItem(oidcFlowKey, JSON.stringify({state, codeVerifier}))
+
+  const url = new URL(authorizeUrl)
+  url.searchParams.set('client_id', clientId)
+  url.searchParams.set('redirect_uri', redirectUri)
+  url.searchParams.set('response_type', 'code')
+  url.searchParams.set('scope', settingStore.settings.oidcScope || 'openid profile email')
+  url.searchParams.set('state', state)
+  url.searchParams.set('code_challenge', codeChallenge)
+  url.searchParams.set('code_challenge_method', 'S256')
+  window.location.href = url.toString()
+}
+
+function randomUrlSafeString(length) {
+  const bytes = new Uint8Array(length)
+  window.crypto.getRandomValues(bytes)
+  return base64UrlEncode(bytes)
+}
+
+async function pkceChallenge(codeVerifier) {
+  const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier))
+  return base64UrlEncode(new Uint8Array(digest))
+}
+
+function base64UrlEncode(bytes) {
+  let binary = ''
+  bytes.forEach(byte => binary += String.fromCharCode(byte))
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function oidcFlow() {
+  try {
+    return JSON.parse(localStorage.getItem(oidcFlowKey) || '{}')
+  } catch (e) {
+    return {}
+  }
+}
+
+oidcGetUser();
 linuxDoGetUser();
+
+async function oidcGetUser() {
+  const params = new URLSearchParams(window.location.search)
+  const code = params.get('code')
+  const state = params.get('state')
+  const flow = oidcFlow()
+
+  if (!code || !state || flow.state !== state) {
+    return
+  }
+
+  oauthLoading.value = true
+  oauthOidcLogin(code, flow.codeVerifier).then(data => {
+    saveToken(data.token)
+  }).catch(() => {
+    oauthLoading.value = false
+  }).finally(() => {
+    localStorage.removeItem(oidcFlowKey)
+    const cleanUrl = window.location.origin + window.location.pathname
+    window.history.replaceState({}, '', cleanUrl)
+  })
+}
 
 async function linuxDoGetUser() {
 
   const params = new URLSearchParams(window.location.search)
   const code = params.get('code')
+  const state = params.get('state')
+  if (state && oidcFlow().state === state) {
+    return
+  }
 
   if (code) {
 

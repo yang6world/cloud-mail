@@ -69,6 +69,8 @@
       <div class="dialog-box">
         <el-input class="dialog-input" v-model="form.name" type="text" :maxlength="12" :placeholder="$t('roleName')"
                   autocomplete="off"/>
+        <el-input class="dialog-input" v-model="form.key" type="text" :maxlength="64" :placeholder="$t('oidcRoleKey')"
+                  autocomplete="off"/>
         <el-input class="dialog-input" v-model="form.description" :maxlength="30" type="text"
                   :placeholder="$t('description')" autocomplete="off"/>
         <el-input-tag class="dialog-input" tag-type="warning" v-model="form.banEmail"
@@ -180,6 +182,7 @@ const dialogType = reactive({
 
 const form = reactive({
   name: null,
+  key: null,
   description: null,
   banEmail: [],
   sendType: 'count',
@@ -324,6 +327,7 @@ function setRole() {
 
 function resetForm() {
   form.name = null
+  form.key = null
   form.description = null
   form.sort = 0
   form.sendType = 'count'
@@ -341,6 +345,7 @@ function openRoleSet(role) {
   roleFormShow.value = true
   form.sort = role.sort
   form.name = role.name
+  form.key = role.key
   form.description = role.description
   form.sendType = role.sendType
   form.sendCount = role.sendCount

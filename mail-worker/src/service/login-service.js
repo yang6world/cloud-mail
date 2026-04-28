@@ -24,7 +24,7 @@ const loginService = {
 
 	async register(c, params, oauth = false) {
 
-		const { email, password, token, code } = params;
+		const { email, password, token, code, roleId } = params;
 
 		let { regKey, register, registerVerify, regVerifyCount, minEmailPrefix, emailPrefixFilter } = await settingService.query(c)
 
@@ -65,16 +65,16 @@ const loginService = {
 			throw new BizError(t('notEmailDomain'));
 		}
 
-		let type = null;
+		let type = oauth && roleId ? Number(roleId) : null;
 		let regKeyId = 0
 
-		if (regKey === settingConst.regKey.OPEN) {
+		if (!type && regKey === settingConst.regKey.OPEN) {
 			const result = await this.handleOpenRegKey(c, regKey, code)
 			type = result?.type
 			regKeyId = result?.regKeyId
 		}
 
-		if (regKey === settingConst.regKey.OPTIONAL) {
+		if (!type && regKey === settingConst.regKey.OPTIONAL) {
 			const result = await this.handleOpenOptional(c, regKey, code)
 			type = result?.type
 			regKeyId = result?.regKeyId
@@ -134,7 +134,7 @@ const loginService = {
 
 		await userService.updateUserInfo(c, userId, true);
 
-		if (regKey !== settingConst.regKey.CLOSE && type) {
+		if (regKey !== settingConst.regKey.CLOSE && type && regKeyId) {
 			await regKeyService.reduceCount(c, code, 1);
 		}
 

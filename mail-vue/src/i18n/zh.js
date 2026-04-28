@@ -57,6 +57,7 @@ const zh = {
     tabStatus: '状态',
     tabRole: '权限身份',
     roleName: '名字',
+    oidcRoleKey: 'OIDC角色标识',
     role: '权限身份',
     all: '全部',
     normal: '正常',

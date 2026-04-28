@@ -34,6 +34,16 @@ crons = ["0 16 * * *"]	#定时任务每天晚上12点执行
 #domain = []				#邮件域名可可配置多个 示例: ["example1.com","example2.com"]
 #admin = ""				#管理员的邮箱	示例: admin@example.com
 #jwt_secret = ""			#jwt令牌的密钥,随便填一串字符串
+#oidc_switch = false		#是否启用OIDC登录
+#oidc_name = "统一身份认证"	#登录按钮名称
+#oidc_issuer = ""			#OIDC签发者地址 示例: https://ums.example.com
+#oidc_client_id = ""		#OIDC客户端ID
+#oidc_client_secret = ""	#OIDC客户端密钥
+#oidc_callback_url = ""		#OIDC回调地址 示例: https://mail.example.com/login
+#oidc_scope = "openid profile email"
+#oidc_authorize_url = ""	#可选，默认 oidc_issuer + /oauth2/authorize
+#oidc_token_url = ""		#可选，默认 oidc_issuer + /oauth2/token
+#oidc_userinfo_url = ""		#可选，默认 oidc_issuer + /oauth2/userinfo
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"

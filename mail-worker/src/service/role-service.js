@@ -176,6 +176,18 @@ const roleService = {
 		return orm(c).select().from(role).where(eq(role.name, roleName)).get();
 	},
 
+	async selectByOidcRole(c, roleName) {
+		const normalizedRoleName = String(roleName || '').trim();
+		if (!normalizedRoleName) {
+			return null;
+		}
+		const roleRow = await orm(c).select().from(role).where(eq(role.key, normalizedRoleName)).get();
+		if (roleRow) {
+			return roleRow;
+		}
+		return await this.selectByName(c, normalizedRoleName);
+	},
+
 	selectByUserIds(c, userIds) {
 
 		if (!userIds && userIds.length === 0) {

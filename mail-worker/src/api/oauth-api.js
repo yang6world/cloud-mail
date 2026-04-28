@@ -7,6 +7,11 @@ app.post('/oauth/linuxDo/login', async (c) => {
 	return c.json(result.ok(loginInfo))
 });
 
+app.post('/oauth/oidc/login', async (c) => {
+	const loginInfo = await oauthService.oidcLogin(c, await c.req.json());
+	return c.json(result.ok(loginInfo))
+});
+
 app.put('/oauth/bindUser', async (c) => {
 	const loginInfo = await oauthService.bindUser(c, await c.req.json());
 	return c.json(result.ok(loginInfo))
