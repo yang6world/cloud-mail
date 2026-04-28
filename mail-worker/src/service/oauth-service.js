@@ -100,24 +100,37 @@ const oauthService = {
 		if (!email) {
 			throw new BizError('OIDC未返回邮箱');
 		}
+		const sub = userInfo.sub || idTokenClaims.sub;
+		if (!sub) {
+			throw new BizError('OIDC未返回sub');
+		}
 
+		const oauthUserId = this.buildOidcUserId(oidcConfig.issuer, sub);
 		const roleRow = await this.resolveOidcRole(c, userInfo, idTokenClaims);
-		let userRow = await userService.selectByEmailIncludeDel(c, email);
+		let oauthRow = await this.getById(c, oauthUserId);
+		let userRow = oauthRow?.userId ? await userService.selectByIdIncludeDel(c, oauthRow.userId) : null;
 
 		if (!userRow) {
-			await loginService.register(c, {
-				email,
-				password: cryptoUtils.genRandomPwd(),
-				roleId: roleRow.roleId
-			}, true);
-			userRow = await userService.selectByEmail(c, email);
-		} else if (Number(userRow.isDel) === 0 && userRow.email !== c.env.admin && userRow.type !== roleRow.roleId) {
+			const registerEmail = this.buildOidcRegisterEmail(c, email);
+			userRow = await userService.selectByEmailIncludeDel(c, registerEmail);
+
+			if (!userRow) {
+				await loginService.register(c, {
+					email: registerEmail,
+					password: cryptoUtils.genRandomPwd(),
+					roleId: roleRow.roleId
+				}, true);
+				userRow = await userService.selectByEmail(c, registerEmail);
+			}
+		}
+
+		if (Number(userRow.isDel) === 0 && userRow.email !== c.env.admin && userRow.type !== roleRow.roleId) {
 			await userService.setType(c, { userId: userRow.userId, type: roleRow.roleId });
 			userRow.type = roleRow.roleId;
 		}
 
-		const oauthRow = await this.saveUser(c, {
-			oauthUserId: this.buildOidcUserId(oidcConfig.issuer, userInfo.sub || idTokenClaims.sub || email),
+		oauthRow = await this.saveUser(c, {
+			oauthUserId,
 			username: userInfo.preferred_username || userInfo.username || idTokenClaims.preferred_username || email,
 			name: userInfo.name || idTokenClaims.name || email,
 			avatar: userInfo.picture || idTokenClaims.picture || '',
@@ -229,6 +242,34 @@ const oauthService = {
 
 	buildOidcUserId(issuer, sub) {
 		return `oidc:${issuer}:${sub}`;
+	},
+
+	buildOidcRegisterEmail(c, oidcEmail) {
+		const name = String(oidcEmail || '').trim().split('@')[0];
+		const domain = this.firstMailDomain(c);
+		if (!name) {
+			throw new BizError('OIDC邮箱前缀为空');
+		}
+		return `${name}@${domain}`;
+	},
+
+	firstMailDomain(c) {
+		let domainList = c.env.domain;
+		if (typeof domainList === 'string') {
+			try {
+				domainList = JSON.parse(domainList);
+			} catch (e) {
+				throw new BizError('环境变量domain必须是JSON类型');
+			}
+		}
+		if (!Array.isArray(domainList) || domainList.length === 0) {
+			throw new BizError('环境变量domain不能为空');
+		}
+		const domain = String(domainList[0] || '').trim();
+		if (!domain) {
+			throw new BizError('环境变量domain不能为空');
+		}
+		return domain;
 	},
 
 	decodeJwtPayload(token) {
