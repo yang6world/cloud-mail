@@ -60,6 +60,11 @@ const routes = [
         component: () => import('@/views/login/index.vue')
     },
     {
+        path: '/oidc',
+        name: 'oidc',
+        component: () => import('@/views/oidc/index.vue')
+    },
+    {
         path: '/test',
         name: 'test',
         component: () => import('@/views/test/index.vue')
@@ -98,11 +103,11 @@ router.beforeEach((to, from, next) => {
 
     const token = localStorage.getItem('token')
 
-    if (!token && to.name !== 'login') {
+    if (!token && !['login', 'oidc'].includes(to.name)) {
         return next({name: 'login'})
     }
 
-    if (!token && to.name === 'login') {
+    if (!token && ['login', 'oidc'].includes(to.name)) {
         loadBackground(next)
         return
     }
